@@ -115,7 +115,7 @@ contract AgroTrace1155 is ERC1155Supply, ERC1155Burnable, AccessControl, IAgroTr
         emit StopRecorded(id, place, msg.sender, time, docRefHash, sensorRoot);
     }
 
-    function appendSensorRoot(uint256 id, bytes32 root, uint64, /*t0*/ uint64 t1)
+    function appendSensorRoot(uint256 id, bytes32 root, uint64 t0, uint64 t1)
         external
         onlyCustodianOrRole(ROLE_TRANSPORTER, id)
     {
