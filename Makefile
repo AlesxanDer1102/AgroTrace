@@ -35,7 +35,7 @@ endif
 deploy:
 	@forge script DeployAgroTrace1155Script $(NETWORK_ARGS)
 
-setup:
+actors-setup:
 	@forge script SetupActorsScript ${SEPOLIA_ARGS}
 
 data-fake:
