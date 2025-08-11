@@ -25,8 +25,7 @@ contract SetupActorsScript is Script {
     }
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         console.log("=== Setting up Minimal Actors ===");
 
