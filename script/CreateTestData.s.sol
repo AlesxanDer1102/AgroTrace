@@ -17,9 +17,12 @@ contract CreateTestDataScript is Script {
     address public producer;
     address public processor;
     address public inspector;
+    address public transporter;
 
     function setUp() public {
-        actorsRegistry = ActorsRegistry(vm.envAddress("ACTORS_REGISTRY_ADDRESS"));
+        actorsRegistry = ActorsRegistry(
+            vm.envAddress("ACTORS_REGISTRY_ADDRESS")
+        );
         farmNFT = FarmNFT(vm.envAddress("FARM_NFT_ADDRESS"));
         certificates = Certificates(vm.envAddress("CERTIFICATES_ADDRESS"));
         agroTrace = AgroTrace1155(vm.envAddress("AGROTRACE_ADDRESS"));
@@ -27,10 +30,12 @@ contract CreateTestDataScript is Script {
         producer = vm.envAddress("PRODUCER_ADDRESS");
         processor = vm.envAddress("PROCESSOR_ADDRESS");
         inspector = vm.envAddress("INSPECTOR_ADDRESS");
+        transporter = vm.envAddress("TRANSPORTER_ROLE");
     }
 
     function run() public {
-        vm.startBroadcast();
+        uint256 producerPK = vm.envUint("PRODUCER_ADDRESS_PK");
+        vm.startBroadcast(producerPK);
 
         console.log("=== Creating Single Test Flow ===");
 
@@ -114,11 +119,15 @@ contract CreateTestDataScript is Script {
         console.log("Stage 1: Produccion completed");
 
         // Transferir a procesador
-        vm.prank(producer);
         agroTrace.safeTransferFrom(producer, processor, 101, 800, "");
 
+        vm.stopBroadcast();
+
+        // Cambiar a procesador
+        uint256 processorPK = vm.envUint("PROCESSOR_ADDRESS_PK");
+        vm.startBroadcast(processorPK);
+
         // Etapa 2: Procesamiento y empaque
-        vm.prank(processor);
         agroTrace.stageAnchor(
             101,
             IAgroTrace1155.Stage.ProcesoEmpaque,
@@ -134,22 +143,25 @@ contract CreateTestDataScript is Script {
         );
         console.log("Stage 2: ProcesoEmpaque completed");
 
-        // Declarar ruta (processor actúa como transporter también)
-        vm.prank(processor);
+        // Declarar ruta con transporter dedicado
         agroTrace.declareRoute(
             101,
-            bytes12("ezpkqtpkmyqh"), // Medellín (origen)
-            bytes12("9q5ct20p6ms7"), // Bogotá (destino)
-            producer, // producer actúa como transporter
+            bytes12("6qj47f2kj5mr"), // Cusco (origen)
+            bytes12("6p8vuy2hgw8r"), // Lima (destino)
+            transporter, // transporter dedicado
             currentTime - 10 days
         );
 
-        // Transferir de vuelta al producer (que actúa como transporter)
-        vm.prank(processor);
-        agroTrace.safeTransferFrom(processor, producer, 101, 800, "");
+        // Transferir a transporter
+        agroTrace.safeTransferFrom(processor, transporter, 101, 800, "");
+
+        vm.stopBroadcast();
+
+        // Cambiar a transporter
+        uint256 transporterPK = vm.envUint("TRANSPORTER_ROLE_PK");
+        vm.startBroadcast(transporterPK);
 
         // Etapa 3: Transporte
-        vm.prank(producer);
         agroTrace.stageAnchor(
             101,
             IAgroTrace1155.Stage.Transporte,
@@ -165,18 +177,31 @@ contract CreateTestDataScript is Script {
         );
         console.log("Stage 3: Transporte completed");
 
-        // Etapa 4: Llegada/Entrega (producer actúa como retailer)
-        vm.prank(producer);
+        // Transferir a retailer (producer actúa como retailer final)
+        agroTrace.safeTransferFrom(transporter, producer, 101, 800, "");
+
+        vm.stopBroadcast();
+
+        // Cambiar de vuelta a producer para entrega final
+        uint256 producerPK = vm.envUint("PRODUCER_ADDRESS_PK");
+        vm.startBroadcast(producerPK);
+
+        // Etapa 4: Llegada/Entrega
         agroTrace.markDelivered(
             101,
-            bytes12("9q5ct20p6ms7"), // Bogotá destino
+            bytes12("6p8vuy2hgw8r"), // Lima destino
             currentTime - 5 days,
             keccak256("delivery_receipt")
         );
         console.log("Stage 4: Llegada completed");
 
+        vm.stopBroadcast();
+
+        // Cambiar a inspector
+        uint256 inspectorPK = vm.envUint("INSPECTOR_ADDRESS_PK");
+        vm.startBroadcast(inspectorPK);
+
         // Agregar certificaciones
-        vm.prank(inspector);
         certificates.linkByRole(
             101,
             keccak256("ORGANIC"),
@@ -187,7 +212,6 @@ contract CreateTestDataScript is Script {
         );
         console.log("Organic certificate added");
 
-        vm.prank(inspector);
         certificates.linkByRole(
             101,
             keccak256("FAIR_TRADE"),
