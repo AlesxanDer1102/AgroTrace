@@ -3,18 +3,19 @@ pragma solidity ^0.8.20;
 
 import "./ICertificates.sol";
 import "./IActorsRegistry.sol";
+import "@openzeppelin/contracts/interfaces/IERC1271.sol";
 
 /**
- * Certificates — Vincula certificados a lotes (separado de trazabilidad).
- * Principio de Responsabilidad Única: solo gestiona certificados/verificación.
+ * Certificates — Gestión de certificados y verificación
+ * v5-ready. Usa IERC1271 para firmas de contratos.
  */
 contract Certificates is ICertificates {
     IActorsRegistry public immutable registry;
     bytes32 private constant ROLE_INSPECTOR = keccak256("INSPECTOR");
-    bytes4  private constant EIP1271_MAGICVALUE = 0x1626ba7e;
+    bytes4 private constant EIP1271_MAGICVALUE = 0x1626ba7e;
 
     mapping(uint256 => bytes32[]) private _lotCertKeys; // lotId -> keys
-    mapping(bytes32  => Certificate) private _certByKey; // key = keccak256(lotId, docHash)
+    mapping(bytes32 => Certificate) private _certByKey; // key = keccak256(lotId, docHash)
 
     constructor(address actorsRegistry) {
         registry = IActorsRegistry(actorsRegistry);
@@ -57,7 +58,7 @@ contract Certificates is ICertificates {
     function isValid(bytes32 key, uint64 nowTs) external view returns (bool ok, string memory why) {
         Certificate memory c = _certByKey[key];
         if (c.docHash == bytes32(0)) return (false, "not found");
-        if (c.revoked)               return (false, "revoked");
+        if (c.revoked) return (false, "revoked");
         if (c.expiresAt != 0 && nowTs > c.expiresAt) return (false, "expired");
         return (true, "");
     }
@@ -70,7 +71,7 @@ contract Certificates is ICertificates {
         return _certByKey[key];
     }
 
-    // ----- internos -----
+    // ---- Internos ----
     function _link(
         uint256 lotId,
         bytes32 certType,
@@ -89,14 +90,19 @@ contract Certificates is ICertificates {
 
     function _isValidIssuerSig(address issuer, bytes32 msgHash, bytes memory sig) internal view returns (bool) {
         if (sig.length == 0) return false;
+
         if (issuer.code.length == 0) {
+            // ECDSA (EOA)
             (bytes32 r, bytes32 s, uint8 v) = _split(sig);
             address rec = ecrecover(msgHash, v, r, s);
             return rec == issuer;
         } else {
-            (bool ok, bytes memory ret) =
-                issuer.staticcall(abi.encodeWithSignature("isValidSignature(bytes32,bytes)", msgHash, sig));
-            return ok && ret.length == 4 && bytes4(ret) == EIP1271_MAGICVALUE;
+            // EIP-1271 (contrato)
+            try IERC1271(issuer).isValidSignature(msgHash, sig) returns (bytes4 magic) {
+                return magic == EIP1271_MAGICVALUE;
+            } catch {
+                return false;
+            }
         }
     }
 

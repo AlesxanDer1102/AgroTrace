@@ -5,7 +5,6 @@ interface IActorsRegistry {
     function hasRole(address who, bytes32 role) external view returns (bool);
     function isActive(address who) external view returns (bool);
 
-    // Roles (hashes conocidos para interoperar)
     function ROLE_PRODUCER() external pure returns (bytes32);
     function ROLE_PROCESSOR() external pure returns (bytes32);
     function ROLE_TRANSPORTER() external pure returns (bytes32);

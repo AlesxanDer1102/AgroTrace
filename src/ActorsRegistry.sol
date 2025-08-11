@@ -4,26 +4,41 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
- * ActorsRegistry — Registro central de organizaciones/roles.
- * Principio de Responsabilidad Única: solo gestiona identidad/roles de actores.
+ * ActorsRegistry — Registro de organizaciones y roles
+ * SRP: solo identidad/roles. v5-ready.
  */
 contract ActorsRegistry is AccessControl {
     bytes32 public constant REGISTRY_ADMIN_ROLE = keccak256("REGISTRY_ADMIN");
 
-    // Roles interoperables como funciones pure (para evitar duplicar hashes)
-    function ROLE_PRODUCER() external pure returns (bytes32) { return keccak256("PRODUCER"); }
-    function ROLE_PROCESSOR() external pure returns (bytes32) { return keccak256("PROCESSOR"); }
-    function ROLE_TRANSPORTER() external pure returns (bytes32) { return keccak256("TRANSPORTER"); }
-    function ROLE_INSPECTOR() external pure returns (bytes32) { return keccak256("INSPECTOR"); }
-    function ROLE_RETAILER() external pure returns (bytes32) { return keccak256("RETAILER"); }
+    // Roles interoperables
+    function ROLE_PRODUCER() external pure returns (bytes32) {
+        return keccak256("PRODUCER");
+    }
+
+    function ROLE_PROCESSOR() external pure returns (bytes32) {
+        return keccak256("PROCESSOR");
+    }
+
+    function ROLE_TRANSPORTER() external pure returns (bytes32) {
+        return keccak256("TRANSPORTER");
+    }
+
+    function ROLE_INSPECTOR() external pure returns (bytes32) {
+        return keccak256("INSPECTOR");
+    }
+
+    function ROLE_RETAILER() external pure returns (bytes32) {
+        return keccak256("RETAILER");
+    }
 
     struct Actor {
-        string orgName;     // Razón social / nombre comercial
-        string did;         // DID o URL oficial
-        string metaURI;     // JSON con datos adicionales
-        bool   active;
+        string orgName;
+        string did;
+        string metaURI;
+        bool active;
         mapping(bytes32 => bool) hasRole;
     }
+
     mapping(address => Actor) private actors;
 
     event ActorAdded(address indexed who, string orgName);
@@ -37,9 +52,10 @@ contract ActorsRegistry is AccessControl {
         _grantRole(REGISTRY_ADMIN_ROLE, admin);
     }
 
-    function addActor(
-        address who, string calldata orgName, string calldata did, string calldata metaURI, bool active
-    ) external onlyRole(REGISTRY_ADMIN_ROLE) {
+    function addActor(address who, string calldata orgName, string calldata did, string calldata metaURI, bool active)
+        external
+        onlyRole(REGISTRY_ADMIN_ROLE)
+    {
         Actor storage a = actors[who];
         a.orgName = orgName;
         a.did = did;
@@ -50,7 +66,11 @@ contract ActorsRegistry is AccessControl {
     }
 
     function updateActor(
-        address who, string calldata orgName, string calldata did, string calldata metaURI, bool active
+        address who,
+        string calldata orgName,
+        string calldata did,
+        string calldata metaURI,
+        bool active
     ) external onlyRole(REGISTRY_ADMIN_ROLE) {
         require(bytes(actors[who].orgName).length > 0, "Actors: not found");
         Actor storage a = actors[who];
@@ -80,7 +100,6 @@ contract ActorsRegistry is AccessControl {
         return actors[who].active;
     }
 
-    // Getters opcionales
     function getActor(address who) external view returns (string memory, string memory, string memory, bool) {
         Actor storage a = actors[who];
         return (a.orgName, a.did, a.metaURI, a.active);

@@ -3,13 +3,13 @@ pragma solidity ^0.8.20;
 
 interface ICertificates {
     struct Certificate {
-        bytes32 certType;   // ORGANICO, FAIRTRADE, etc.
-        bytes32 docHash;    // hash de PDF/JSON/CID
-        address issuer;     // autoridad certificadora
-        uint64  issuedAt;
-        uint64  expiresAt;  // 0 = sin exp.
-        bool    revoked;
-        bytes   sig;        // firma opcional (ECDSA/EIP-1271)
+        bytes32 certType;
+        bytes32 docHash;
+        address issuer;
+        uint64 issuedAt;
+        uint64 expiresAt;
+        bool revoked;
+        bytes sig;
     }
 
     event CertificateLinked(uint256 indexed lotId, bytes32 indexed certKey, bytes32 certType, address issuer);
