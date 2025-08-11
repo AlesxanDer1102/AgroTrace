@@ -26,7 +26,7 @@ format :; forge fmt
 anvil :; anvil -m 'test test test test test test test test test test test junk' --steps-tracing --block-time 1
 
 NETWORK_ARGS := --rpc-url http://localhost:8545 --private-key $(DEFAULT_ANVIL_KEY) --broadcast
-SEPOLIA_ARGS := --rpc-url $(SEPOLIA_RPC_URL) --private-key $(SEPOLIA_PRIVATE_KEY) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
+SEPOLIA_ARGS := --rpc-url $(SEPOLIA_RPC_URL) --account dev --broadcast -vvvv
 
 ifeq ($(findstring --network sepolia,$(ARGS)),--network sepolia)
 	NETWORK_ARGS := --rpc-url $(SEPOLIA_RPC_URL) --account dev --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
@@ -36,8 +36,8 @@ deploy:
 	@forge script DeployAgroTrace1155Script $(NETWORK_ARGS)
 
 setup:
-	@forge script SetupActorsScript ${NETWORK_ARGS}
+	@forge script SetupActorsScript ${SEPOLIA_ARGS}
 
 data-fake:
-	@forge script CreateTestDataScript $(NETWORK_ARGS)
+	@forge script CreateTestDataScript $(SEPOLIA_ARGS)
 
